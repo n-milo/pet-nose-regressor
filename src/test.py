@@ -1,11 +1,11 @@
 import math
+import sys
 import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
 import torch.nn as nn
 import cv2
 import numpy as np
-import argparse
 
 import lab5
 from dataset import PetNoseDataset
@@ -14,10 +14,10 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 
-def test_model(model, device, should_display):
+def test_model(model, device, should_display, dataset_dir, output_file):
     print('Testing model...')
 
-    test_dataset = PetNoseDataset(root='./oxford-iiit-pet-noses', train=False, transform=transforms.ToTensor())
+    test_dataset = PetNoseDataset(root=dataset_dir, train=False, transform=transforms.ToTensor())
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
     resizer = transforms.Resize((224, 224), antialias=True)
 
@@ -49,9 +49,11 @@ def test_model(model, device, should_display):
 
         if should_display:
             display = images[0].cpu().numpy().transpose(1, 2, 0).copy()
-            cv2.circle(display, (output_x, output_y), 3, (255, 0, 0), -1)
+            cv2.circle(display, (output_x, output_y), 3, (0, 255, 0), -1)
+            cv2.circle(display, (output_x, output_y), 15, (0, 255, 0), 1)
             cv2.circle(display, (label_x, label_y), 3, (0, 0, 255), -1)
-            cv2.imshow('image', display)
+            cv2.circle(display, (label_x, label_y), 15, (0, 0, 255), 1)
+            cv2.imshow('Image', display)
             key = cv2.waitKey(0)
             if key == ord('c'):
                 should_display = False
@@ -60,18 +62,25 @@ def test_model(model, device, should_display):
             else:
                 continue
 
-    print('PET NOSE REGGRESSOR RESULTS')
-    print('\tpixels\tnormalized')
-    print(f'min:\t{np.min(dists_pixel):.1f}\t{np.min(dists_norm):.4f}')
-    print(f'max:\t{np.max(dists_pixel):.1f}\t{np.max(dists_norm):.4f}')
-    print(f'mean:\t{np.mean(dists_pixel):.1f}\t{np.mean(dists_norm):.4f}')
-    print(f'stdev:\t{np.std(dists_pixel):.1f}\t{np.std(dists_norm):.4f}')
-    print('(normalized values: 0.0 = top left, 1.0 = bottom right)')
+    print_results(sys.stdout, dists_pixel, dists_norm)
+    if output_file is not None:
+        print_results(output_file, dists_pixel, dists_norm)
+
+
+def print_results(file, dists_pixel, dists_norm):
+    print('PET NOSE REGGRESSOR RESULTS', file=file)
+    print('\tpixels\tnormalized', file=file)
+    print(f'min:\t{np.min(dists_pixel):.1f}\t{np.min(dists_norm):.4f}', file=file)
+    print(f'max:\t{np.max(dists_pixel):.1f}\t{np.max(dists_norm):.4f}', file=file)
+    print(f'mean:\t{np.mean(dists_pixel):.1f}\t{np.mean(dists_norm):.4f}', file=file)
+    print(f'stdev:\t{np.std(dists_pixel):.1f}\t{np.std(dists_norm):.4f}', file=file)
+    print('(normalized values: 0.0 = top left, 1.0 = bottom right)', file=file)
 
 
 if __name__ == '__main__':
     args = lab5.create_arguments()
-    args.add_argument('-no_display', action='store_true', help='do not display images during testing')
+    args.add_argument('-no_display', action='store_true', help='do not display sample images during testing')
+    args.add_argument('-output', type=str, default=None, help='save test output to a file')
     opts = args.parse_args()
 
     should_display = not opts.no_display
@@ -89,6 +98,13 @@ if __name__ == '__main__':
     print('any other key - display next image')
     print('blue: predicted, red: actual')
 
-    test_model(model, device, should_display=should_display)
+    output_file = None
+    if opts.output is not None:
+        output_file = open(opts.output, 'w')
+
+    test_model(model, device,
+               should_display=should_display,
+               dataset_dir=opts.dataset,
+               output_file=output_file)
 
 

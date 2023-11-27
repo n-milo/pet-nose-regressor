@@ -7,9 +7,12 @@ from PIL import Image
 
 class PetNoseDataset(Dataset):
 
-    def __init__(self, root, labels_name='train_noses.3.txt', images_dir='images', train=True, transform=None):
+    def __init__(self, root, images_dir='images', train=True, transform=None):
         self.root = root
         self.transform = transform
+
+        self.train = train
+        labels_name = 'train_noses.3.txt' if train else 'test_noses.txt'
 
         self.noses = dict()
         with open(os.path.join(self.root, labels_name)) as label_file:
@@ -29,20 +32,14 @@ class PetNoseDataset(Dataset):
             dir = os.path.join(self.images_dir, subdir)
             if os.path.isdir(dir):
                 for image in os.listdir(dir):
-                    if fnmatch.fnmatch(image, '*.jpg') and image in self.noses: # some images are not in labels.txt, skip those
+                    if fnmatch.fnmatch(image, '*.jpg') and image in self.noses:
                         self.image_files += [(subdir, image)]
 
-        self.train = train
-        if train:
-            self.start = 0
-            self.end = 5000
-        else:
-            self.start = 5000
-            self.end = len(self.image_files)
+        self.max = len(self.image_files)
 
 
     def __len__(self):
-        return self.end - self.start
+        return self.max
 
     def __getitem__(self, idx):
         dir, name = self.image_files[idx]
@@ -50,7 +47,7 @@ class PetNoseDataset(Dataset):
         path = os.path.join(self.images_dir, dir, name)
         image = Image.open(path).convert('RGB')
 
-        # normalize nose positions so we can resize the image later and the nose position still has meaning
+        # normalize nose positions
         nose_pos_x = nose_pos[0] / image.size[0]
         nose_pos_y = nose_pos[1] / image.size[1]
 
@@ -59,11 +56,11 @@ class PetNoseDataset(Dataset):
         return [image, torch.tensor(data=(nose_pos_x, nose_pos_y), dtype=torch.float32)]
 
     def __iter__(self):
-        self.num = self.start
+        self.num = 0
         return self
 
     def __next__(self):
-        if self.num >= self.end:
+        if self.num >= self.max:
             raise StopIteration
         else:
             self.num += 1
