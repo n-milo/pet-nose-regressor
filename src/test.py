@@ -91,12 +91,13 @@ if __name__ == '__main__':
     model.to(device)
     model.load_state_dict(torch.load(opts.model))
 
-    print('PET NOSE TESTER')
-    print('===============')
-    print('C - finish testing without display')
-    print('Q - quit immediately')
-    print('any other key - display next image')
-    print('blue: predicted, red: actual')
+    if should_display:
+        print('PET NOSE TESTER')
+        print('===============')
+        print('C - finish testing without display')
+        print('Q - quit immediately')
+        print('any other key - display next image')
+        print('blue: predicted, red: actual')
 
     output_file = None
     if opts.output is not None:
