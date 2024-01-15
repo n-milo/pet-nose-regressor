@@ -1,4 +1,4 @@
-# Pet Nose Classifier
+# Pet Nose Regressor
 
 Final project for ELEC 475 - Computer Vision with Deep Learning.
 
